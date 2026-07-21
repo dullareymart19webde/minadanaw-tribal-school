@@ -1,145 +1,166 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, User, ArrowRight, ShieldAlert, Loader2 } from 'lucide-react';
+import { Lock, User, ArrowRight, ShieldAlert, UserPlus, Home } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '../firebase';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (!username || !password) {
-      setError('Please enter both username and password.');
+    if (!email || !password) {
+      setError('Please enter both email and password.');
       return;
     }
 
     setLoading(true);
 
-    // Simulate network request
-    setTimeout(() => {
-      // Mock authentication: as long as credentials match the selected role's prototype credentials
-      const valid = 
-        (role === 'admin' && username.toLowerCase() === 'admin' && password === 'admin123') ||
-        (role === 'faculty' && username.toLowerCase() === 'faculty' && password === 'faculty123') ||
-        (role === 'student' && username.toLowerCase() === 'student' && password === 'student123');
+    try {
+      // Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      if (valid) {
-        localStorage.setItem('userRole', role);
-        if (role === 'admin') navigate('/portal/admin');
-        if (role === 'faculty') navigate('/portal/faculty');
-        if (role === 'student') navigate('/portal/student');
+      // Fetch user role from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const actualRole = userData.role;
+
+        if (userData.status === 'pending' || userData.status === 'Pending') {
+          setError('Your account is pending admin approval.');
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        if (actualRole !== role) {
+          setError(`You do not have ${role} privileges.`);
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Navigate based on actual role
+        if (actualRole === 'admin') navigate('/portal/admin');
+        if (actualRole === 'faculty') navigate('/portal/faculty');
+        if (actualRole === 'student') navigate('/portal/student');
       } else {
-        setError('Invalid credentials for the selected role.');
-        setLoading(false);
+        setError('User record not found in database.');
+        await auth.signOut();
       }
-    }, 1200);
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError('Invalid email or password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '70px', width: 'auto', marginBottom: '1rem' }} />
-          <h2 className="login-title">MTSI Portal</h2>
-          <p className="login-subtitle">Sign in to access your account</p>
+    <div className="auth-container">
+      {/* Left Banner */}
+      <div className="auth-banner">
+        <div className="auth-banner-content">
+          <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '120px', width: '120px', backgroundColor: 'white', borderRadius: '50%', objectFit: 'contain', padding: '4px', marginBottom: '2rem', boxShadow: '0 0 20px rgba(255,255,255,0.2)' }} />
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', lineHeight: 1.2 }}>Welcome to the MTSI Portal</h1>
+          <p style={{ fontSize: '1.1rem', opacity: 0.9, lineHeight: 1.6 }}>Access your dashboard, manage your classes, and stay updated with the latest campus announcements.</p>
         </div>
-        
-        {error && (
-          <div className="login-error">
-            <ShieldAlert size={18} />
-            <span>{error}</span>
-          </div>
-        )}
+      </div>
 
-        <form onSubmit={handleLogin} className="login-form">
-          <div className="form-group" style={{ position: 'relative', marginBottom: '1rem' }}>
-            <label>Login As</label>
-            <select 
-              value={role} 
-              onChange={(e) => setRole(e.target.value)}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-                backgroundColor: 'white',
-                fontSize: '0.95rem',
-                color: 'var(--color-text-dark)',
-                fontFamily: 'inherit',
-                outline: 'none'
-              }}
-            >
-              <option value="student">Student</option>
-              <option value="faculty">Faculty</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </div>
-
-          <div className="form-group" style={{ position: 'relative' }}>
-            <label>Username</label>
-            <div className="input-with-icon">
-              <User size={18} className="input-icon" />
-              <input 
-                type="text" 
-                placeholder="Enter your username" 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="form-group" style={{ position: 'relative' }}>
-            <label>Password</label>
-            <div className="input-with-icon">
-              <Lock size={18} className="input-icon" />
-              <input 
-                type="password" 
-                placeholder="••••••••" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+      {/* Right Form */}
+      <div className="auth-form-wrapper">
+        <div className="auth-form-card">
+          <div className="auth-form-header">
+            <h2>Sign In</h2>
+            <p>Enter your credentials to continue</p>
           </div>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--color-text-body)' }}>
-              <input type="checkbox" style={{ width: 'auto', margin: 0 }} disabled={loading} />
-              Remember me
-            </label>
-            <a href="#" style={{ color: 'var(--color-primary)', fontWeight: 500 }}>Forgot password?</a>
-          </div>
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#FEE2E2', color: '#DC2626', padding: '1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', fontSize: '0.9rem', fontWeight: 500 }}>
+              <ShieldAlert size={18} />
+              <span>{error}</span>
+            </div>
+          )}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', display: 'flex', justifyContent: 'center' }} disabled={loading}>
-            {loading ? (
-              <Loader2 size={20} className="spinner" />
-            ) : (
-              <>Sign In <ArrowRight size={18} style={{ marginLeft: '0.5rem' }} /></>
-            )}
-          </button>
-        </form>
-        
-        <div className="login-footer" style={{ marginTop: '2.5rem', padding: '1.5rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-sm)', textAlign: 'left' }}>
-          <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-dark)' }}>Prototype Credentials:</strong>
-          <ul style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li><strong>Admin:</strong> admin / admin123</li>
-            <li><strong>Faculty:</strong> faculty / faculty123</li>
-            <li><strong>Student:</strong> student / student123</li>
-          </ul>
-        </div>
-        
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link to="/" style={{ color: 'var(--color-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            &larr; Back to main website
-          </Link>
+          <form onSubmit={handleLogin}>
+            <div className="auth-input-group">
+              <label>Login As</label>
+              <div className="auth-input-wrapper">
+                <select 
+                  value={role} 
+                  onChange={(e) => setRole(e.target.value)}
+                  disabled={loading}
+                  className="auth-input"
+                  style={{ paddingLeft: '1rem', appearance: 'none' }}
+                >
+                  <option value="student">Student</option>
+                  <option value="faculty">Faculty</option>
+                  <option value="admin">Administrator</option>
+                </select>
+                <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              </div>
+            </div>
+
+            <Input 
+              label="Email Address"
+              icon={User}
+              type="email"
+              placeholder="student@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
+
+            <Input 
+              label="Password"
+              icon={Lock}
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', fontSize: '0.85rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: '#64748B' }}>
+                <input type="checkbox" style={{ accentColor: '#0D742B', width: '16px', height: '16px' }} disabled={loading} />
+                Remember me
+              </label>
+              <a href="#" style={{ color: '#0D742B', fontWeight: 600, textDecoration: 'none' }}>Forgot password?</a>
+            </div>
+
+            <Button type="submit" isLoading={loading}>
+              Sign In <ArrowRight size={18} />
+            </Button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+            <p style={{ color: '#64748B', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
+              Don't have an account?{' '}
+              <Link to="/register" style={{ color: '#0D742B', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <UserPlus size={16} /> Register Now
+              </Link>
+            </p>
+
+            <Link to="/" style={{ color: '#9CA3AF', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', fontWeight: 500, transition: 'color 0.2s' }}>
+              <Home size={16} /> Back to main website
+            </Link>
+          </div>
+          
         </div>
       </div>
     </div>

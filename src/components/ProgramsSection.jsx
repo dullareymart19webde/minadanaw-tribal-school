@@ -41,10 +41,10 @@ const ProgramsSection = () => {
         </div>
         
         <div className="cards-grid">
-          {programs.map((prog) => (
-            <div className="feature-card" key={prog.id}>
+          {programs.map((prog, index) => (
+            <div className={`feature-card fade-up-element delay-${(index % 3 + 1) * 100}`} key={prog.id}>
               <div className="feature-icon">{prog.icon}</div>
-              <h3 className="feature-title">{prog.title}</h3>
+              <h3 className="feature-title" style={{ fontFamily: 'var(--font-display)' }}>{prog.title}</h3>
               <p className="feature-desc">{prog.description}</p>
             </div>
           ))}

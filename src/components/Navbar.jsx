@@ -14,7 +14,7 @@ const Navbar = () => {
     <nav className="navbar">
       <div className="container">
         <Link to="/" className="nav-logo" onClick={closeMenu}>
-          <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '40px', width: 'auto' }} />
+          <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '40px', width: '40px', backgroundColor: 'white', borderRadius: '50%', objectFit: 'contain', padding: '1px' }} />
           <span className="nav-logo-text">Mindanao Tribal School Inc.</span>
         </Link>
 

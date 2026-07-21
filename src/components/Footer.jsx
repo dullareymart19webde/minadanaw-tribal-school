@@ -9,7 +9,7 @@ const Footer = () => {
         <div className="footer-grid">
           <div style={{ maxWidth: '300px' }}>
             <h3 style={{ color: 'var(--color-surface)', fontSize: '1.5rem', marginBottom: '1.5rem', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '40px', width: 'auto' }} />
+              <img src="/school-logo.png" alt="MTSI Logo" style={{ height: '40px', width: '40px', backgroundColor: 'white', borderRadius: '50%', objectFit: 'contain', padding: '1px' }} />
               MTSI
             </h3>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: 1.8, marginBottom: '2rem' }}>
